@@ -203,3 +203,54 @@ themeToggle.addEventListener('click', () => {
   updateThemeButton();
 });
 updateThemeButton();
+
+// ---- Focus timer ----
+const focusTime = document.querySelector('#focus-time');
+const focusStart = document.querySelector('#focus-start');
+const FOCUS_SECONDS = 25 * 60;
+let focusLeft = FOCUS_SECONDS, focusInterval = null;
+function paintFocus() {
+  const m = String(Math.floor(focusLeft / 60)).padStart(2, '0');
+  const s = String(focusLeft % 60).padStart(2, '0');
+  focusTime.textContent = `${m}:${s}`;
+  document.title = focusInterval ? `${m}:${s} · Daylist` : 'Daylist — Make room for progress';
+}
+focusStart.addEventListener('click', () => {
+  if (focusInterval) { clearInterval(focusInterval); focusInterval = null; focusStart.textContent = 'Resume'; paintFocus(); return; }
+  focusStart.textContent = 'Pause';
+  focusInterval = setInterval(() => {
+    focusLeft--;
+    if (focusLeft <= 0) {
+      clearInterval(focusInterval); focusInterval = null;
+      focusLeft = FOCUS_SECONDS; focusStart.textContent = 'Start focus';
+      notify('Focus session complete! Take a break.');
+    }
+    paintFocus();
+  }, 1000);
+});
+document.querySelector('#focus-reset').addEventListener('click', () => {
+  clearInterval(focusInterval); focusInterval = null;
+  focusLeft = FOCUS_SECONDS; focusStart.textContent = 'Start focus'; paintFocus();
+});
+
+// ---- Confetti when all tasks are done ----
+let celebrated = false;
+function celebrate() {
+  for (let i = 0; i < 60; i++) {
+    const p = document.createElement('i');
+    p.className = 'confetti';
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.background = `hsl(${Math.random() * 360} 70% 60%)`;
+    p.style.animationDelay = Math.random() * 0.6 + 's';
+    document.body.append(p);
+    setTimeout(() => p.remove(), 3500);
+  }
+}
+const originalRender = render;
+render = function () {
+  originalRender();
+  const done = tasks.filter(t => t.status === 'done').length;
+  const all = tasks.length > 0 && done === tasks.length;
+  if (all && !celebrated) celebrate();
+  celebrated = all;
+};
